@@ -82,6 +82,14 @@ func main() {
 		}
 	}()
 
+    authCtx, _ := authenticator.AuthorizedContext(ctx)
+    resp, _ := apiClient.CreatePost(authCtx, &application_apiv1.CreatePostRequest{
+            Text: "テスト",
+            PublishingType: constv1.PostPublishingType_POST_PUBLISHING_TYPE_NOT_PUBLISHING.Enum(),
+    })
+    log.Print(resp.String())
+
+
 	// WaitGroupで複数のゴルーチンを管理
 	var wg sync.WaitGroup
 
