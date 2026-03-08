@@ -11,9 +11,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/mixigroup/mixi2-application-sample-go/config"
-	"github.com/mixigroup/mixi2-application-sample-go/common"
-	"github.com/mixigroup/mixi2-application-sample-go/handler"
+	"github.com/U4ko3/mixi2-api-salmonrun-schedule-bot/config"
+	"github.com/U4ko3/mixi2-api-salmonrun-schedule-bot/common"
+	"github.com/U4ko3/mixi2-api-salmonrun-schedule-bot/handler"
 	"github.com/mixigroup/mixi2-application-sdk-go/auth"
 	"github.com/mixigroup/mixi2-application-sdk-go/event/stream"
 	application_apiv1 "github.com/mixigroup/mixi2-application-sdk-go/gen/go/social/mixi/application/service/application_api/v1"
