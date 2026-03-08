@@ -33,7 +33,24 @@ func (h *Handler) Handle(ctx context.Context, ev *modelv1.Event) error {
 		h.logger.Info("received POST_CREATED event",
 			slog.String("event_id", ev.EventId),
 		)
-		// Add your post created event handling logic here
+		authCtx, err := authenticator.AuthorizedContext(ctx)
+		if err != nil {
+			return err
+		}
+
+		postText := common.GetSalmonSchedule()
+		if postText == "" {
+			logger.Info("no schedule information available")
+			return nil
+		} else {
+			_, err = apiClient.CreatePost(authCtx, &application_apiv1.CreatePostRequest{
+				Text: postText,
+			})
+			if err != nil {
+				return err
+			}
+		}
+
 	case constv1.EventType_EVENT_TYPE_CHAT_MESSAGE_RECEIVED:
 		h.logger.Info("received CHAT_MESSAGE_RECEIVED event",
 			slog.String("event_id", ev.EventId),
