@@ -8,28 +8,7 @@ import (
 	constv1 "github.com/mixigroup/mixi2-application-sdk-go/gen/go/social/mixi/application/const/v1"
 	modelv1 "github.com/mixigroup/mixi2-application-sdk-go/gen/go/social/mixi/application/model/v1"
 	application_apiv1 "github.com/mixigroup/mixi2-application-sdk-go/gen/go/social/mixi/application/service/application_api/v1"
-	"fmt"
-	"net/http"
-	"encoding/json"
-	"io/ioutil"
-	"strings"
 )
-
-type APIResponse struct {
-	Results []struct {
-        StartTime string `json:"start_time"`
-        EndTime   string `json:"end_time"`
-		Boss struct {
-			Name string `json:"name"`
-		} `json:"boss"`
-		Stage struct {
-			Name string `json:"name"`
-		} `json:"stage"`
-		Weapons []struct {
-			Name string `json:"name"`
-		} `json:"weapons"`
-	} `json:"results"`
-}
 
 // Handler implements event.EventHandler interface.
 type Handler struct {
