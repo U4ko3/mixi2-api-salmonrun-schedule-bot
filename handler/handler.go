@@ -4,6 +4,8 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/U4ko3/mixi2-api-salmonrun-schedule-bot/common"
+
 	"github.com/mixigroup/mixi2-application-sdk-go/auth"
 	constv1 "github.com/mixigroup/mixi2-application-sdk-go/gen/go/social/mixi/application/const/v1"
 	modelv1 "github.com/mixigroup/mixi2-application-sdk-go/gen/go/social/mixi/application/model/v1"
@@ -33,17 +35,17 @@ func (h *Handler) Handle(ctx context.Context, ev *modelv1.Event) error {
 		h.logger.Info("received POST_CREATED event",
 			slog.String("event_id", ev.EventId),
 		)
-		authCtx, err := authenticator.AuthorizedContext(ctx)
+		authCtx, err := h.authenticator.AuthorizedContext(ctx)
 		if err != nil {
 			return err
 		}
 
 		postText := common.GetSalmonSchedule()
 		if postText == "" {
-			logger.Info("no schedule information available")
+			h.logger.Info("no schedule information available")
 			return nil
 		} else {
-			_, err = apiClient.CreatePost(authCtx, &application_apiv1.CreatePostRequest{
+			_, err = h.apiClient.CreatePost(authCtx, &application_apiv1.CreatePostRequest{
 				Text: postText,
 			})
 			if err != nil {
