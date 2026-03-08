@@ -122,6 +122,25 @@ func main() {
 
 func periodicTask(ctx context.Context, apiClient application_apiv1.ApplicationServiceClient, authenticator auth.Authenticator, logger *slog.Logger) error {
 	// ここに定期実行したい処理を記述
-	logger.Info("periodic task executed")
-	return nil
+	authCtx, err := authenticator.AuthorizedContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	postText := common.GetSalmonSchedule()
+	if postText == "" {
+		logger.Info("no schedule information available")
+		return nil
+	} else {
+		_, err = apiClient.CreatePost(authCtx, &application_apiv1.CreatePostRequest{
+			Text: postText,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+    logger.Info("periodic task executed")
+    return nil
+
 }
