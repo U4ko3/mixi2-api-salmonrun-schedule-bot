@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"log"
-	"os"
 
 	"github.com/U4ko3/mixi2-api-salmonrun-schedule-bot/common"
 	"github.com/U4ko3/mixi2-api-salmonrun-schedule-bot/config"
