@@ -1,4 +1,4 @@
-module github.com/mixigroup/mixi2-application-sample-go
+module github.com/U4ko3/mixi2-api-salmonrun-schedule-bot
 
 go 1.24.6
 
