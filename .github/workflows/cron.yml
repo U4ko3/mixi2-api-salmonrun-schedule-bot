@@ -18,7 +18,7 @@ jobs:
         go-version: '1.21'
 
     - name: Verify environment variables
-      run: echo "API_ADDRESS: ${{ secrets.API_ADDRESS }}"
+      run: echo ${{ secrets.API_ADDRESS }}
 
     - name: Run periodic task
       env:
