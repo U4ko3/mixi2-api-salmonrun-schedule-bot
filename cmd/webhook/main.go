@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/U4ko3/mixi2-api-salmonrun-schedule-bot/config"
+	"github.com/U4ko3/mixi2-api-salmonrun-schedule-bot/common"
 	"github.com/U4ko3/mixi2-api-salmonrun-schedule-bot/handler"
 	"github.com/mixigroup/mixi2-application-sdk-go/auth"
 	"github.com/mixigroup/mixi2-application-sdk-go/event/webhook"
