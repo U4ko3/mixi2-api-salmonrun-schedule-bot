@@ -86,6 +86,26 @@ func main() {
 	// WaitGroupで複数のゴルーチンを管理
 	var wg sync.WaitGroup
 
+	// 定期処理を実行するゴルーチン
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		ticker := time.NewTicker(30 * time.Second) // 30秒ごとに実行
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				logger.Info("executing periodic task")
+				if err := periodicTask(ctx, apiClient, authenticator, logger); err != nil {
+					logger.Error("periodic task error", slog.String("error", err.Error()))
+				}
+			}
+		}
+	}()
+
 	// Webhookサーバーをゴルーチンで実行
 	wg.Add(1)
 	go func() {
@@ -96,25 +116,6 @@ func main() {
 		}
 	}()
 
-//	// 定期処理を実行するゴルーチン
-//	wg.Add(1)
-//	go func() {
-//		defer wg.Done()
-//		ticker := time.NewTicker(30 * time.Second) // 30秒ごとに実行
-//		defer ticker.Stop()
-//
-//		for {
-//			select {
-//			case <-ctx.Done():
-//				return
-//			case <-ticker.C:
-//				logger.Info("executing periodic task")
-//				if err := periodicTask(ctx, apiClient, authenticator, logger); err != nil {
-//					logger.Error("periodic task error", slog.String("error", err.Error()))
-//				}
-//			}
-//		}
-//	}()
 
 	// 全てのゴルーチンの完了を待つ
 	wg.Wait()
