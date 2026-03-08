@@ -58,7 +58,7 @@ func GetSalmonSchedule() string {
     if len(responseObject.Results) == 0 {
         return ""
     } else {
-        nextTime := diffStartEndTime(responseObject.Results[0].StartTime, responseObject.Results[0].EndTime)
+        nextTime := diffStartEndTime(responseObject.Results[0].EndTime)
         if nextTime > 10 {
             // 10時間以上残っている場合は次のスケジュールを表示
             result = "■ 現在のステージ情報\n"
@@ -103,7 +103,7 @@ func GetCurrentSalmonSchedule() string {
     if len(responseObject.Results) == 0 {
         return ""
     } else {
-        nextTime := diffStartEndTime(responseObject.Results[0].StartTime, responseObject.Results[0].EndTime)
+        nextTime := diffStartEndTime(responseObject.Results[0].EndTime)
         result = "■ 現在のステージ情報 " + fmt.Sprintf("【終了まであと %d 時間！】\n", nextTime)
         result += formatScheduleInfo(responseObject.Results[0])
             
@@ -143,21 +143,19 @@ func formatScheduleInfo(result ScheduleResult) string {
     return sb.String()
 }
 
-// ２つの時間差を取得し、２時間以内だとメッセージを出力
-func diffStartEndTime(StartTime, EndTime string) int {
+// ２つの時間差を取得し、EndTimeと現在日時の差分を計算
+func diffStartEndTime(EndTime string) int {
     // フォーマット: time.RFC3339 (例: "2006-01-02T15:04:05Z07:00")
     layout := time.RFC3339
 
-    t1, err1 := time.Parse(layout, StartTime)
-    if err1 != nil {
-        fmt.Println("エラー: 開始時間のパースに失敗しました", err1)
-        return -1
-    }
     t2, err2 := time.Parse(layout, EndTime)
     if err2 != nil {
         fmt.Println("エラー: 終了時間のパースに失敗しました", err2)
         return -1
     }
+
+    // 現在時刻を取得
+    t1 := time.Now()
 
     duration := t2.Sub(t1)
     hours := int(duration.Hours())
