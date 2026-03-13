@@ -43,6 +43,7 @@ func (h *Handler) Handle(ctx context.Context, ev *modelv1.Event) error {
 		}
 
 		receivedPost := ev.GetPostCreatedEvent().GetPost()
+		receivedPostId := receivedPost.GetPostId()
 		receivedPostText := receivedPost.GetText()
 		postText := ""
 		if strings.Contains(receivedPostText, "次") {
@@ -56,6 +57,7 @@ func (h *Handler) Handle(ctx context.Context, ev *modelv1.Event) error {
 			return nil
 		} else {
 			_, err = h.apiClient.CreatePost(authCtx, &application_apiv1.CreatePostRequest{
+						InReplyToPostId: &receivedPostId,
 						Text: postText,
 					})
 			if err != nil {
