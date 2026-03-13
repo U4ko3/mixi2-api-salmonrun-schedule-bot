@@ -10,6 +10,8 @@ import (
 	constv1 "github.com/mixigroup/mixi2-application-sdk-go/gen/go/social/mixi/application/const/v1"
 	modelv1 "github.com/mixigroup/mixi2-application-sdk-go/gen/go/social/mixi/application/model/v1"
 	application_apiv1 "github.com/mixigroup/mixi2-application-sdk-go/gen/go/social/mixi/application/service/application_api/v1"
+
+	"strings"
 )
 
 // Handler implements event.EventHandler interface.
@@ -40,14 +42,22 @@ func (h *Handler) Handle(ctx context.Context, ev *modelv1.Event) error {
 			return err
 		}
 
-		postText := common.GetSalmonSchedule()
+		receivedPost := ev.GetPostCreatedEvent().GetPost()
+		receivedPostText := receivedPost.GetText()
+		postText := ""
+		if strings.Contains(receivedPostText, "次") {
+			postText = common.GetNextSalmonSchedule()
+		} else {
+			postText = common.GetCurrentSalmonSchedule()
+		}
+
 		if postText == "" {
 			h.logger.Info("no schedule information available")
 			return nil
 		} else {
 			_, err = h.apiClient.CreatePost(authCtx, &application_apiv1.CreatePostRequest{
-				Text: postText,
-			})
+						Text: postText,
+					})
 			if err != nil {
 				return err
 			}
