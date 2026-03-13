@@ -2,7 +2,7 @@ name: Salmon Run Schedule Bot
 
 on:
   schedule:
-    - cron: '0 15,23,7 * * *'  # 毎日8時、16時、24時実行
+    - cron: '0 14,21,6 * * *'  # 毎日7時、15時、23時実行
   workflow_dispatch:  # 手動実行も可能
 
 jobs:
