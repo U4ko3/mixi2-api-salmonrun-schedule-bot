@@ -50,16 +50,39 @@ func periodicTask(ctx context.Context, apiClient application_apiv1.ApplicationSe
 		return err
 	}
 
-	postText := common.GetSalmonSchedule()
+	postText, lastRun := common.GetSalmonSchedule()
 	if postText == "" {
 		log.Println("no schedule information available")
 		return nil
 	} else {
-		_, err = apiClient.CreatePost(authCtx, &application_apiv1.CreatePostRequest{
+		post, err := apiClient.CreatePost(authCtx, &application_apiv1.CreatePostRequest{
 			Text: postText,
 		})
 		if err != nil {
 			return err
+		}
+
+		// CreatePostResponse contains a nested Post message.
+		// PostId is available via post.GetPost().GetPostId().
+		postId := ""
+		if p := post.GetPost(); p != nil {
+			postId = p.GetPostId()
+		}
+
+		if lastRun && postId != "" {
+			postText := common.GetNextSalmonSchedule()
+			if postText == "" {
+				log.Println("no schedule information available")
+				return nil
+			} else {
+				_, err = apiClient.CreatePost(authCtx, &application_apiv1.CreatePostRequest{
+					InReplyToPostId: &postId,
+					Text:           postText,
+				})
+				if err != nil {
+					return err
+				}
+			}
 		}
 	}
 
