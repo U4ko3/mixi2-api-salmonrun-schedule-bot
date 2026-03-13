@@ -108,7 +108,7 @@ func main() {
     wg.Add(1)
     go func() {
         defer wg.Done()
-        ticker := time.NewTicker(10 * time.Second) // 30秒ごとに実行
+        ticker := time.NewTicker(300 * time.Second) // 300秒ごとに実行
         defer ticker.Stop()
 
         for {
@@ -151,7 +151,7 @@ func periodicTask(ctx context.Context, apiClient application_apiv1.ApplicationSe
 		return err
 	}
 
-	postText := common.GetSalmonSchedule()
+	postText, _ := common.GetSalmonSchedule()
 	if postText == "" {
 		logger.Info("no schedule information available")
 		return nil
