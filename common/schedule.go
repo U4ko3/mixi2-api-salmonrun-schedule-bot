@@ -65,22 +65,22 @@ func GetSalmonSchedule() (string, bool) {
         if nextTime > 10 {
             // 10時間以上残っている場合は次のスケジュールを表示
             if (responseObject.Results[0].IsBigRun) {
-                result = "■ 現在のステージ情報  ★ビッグラン開催中★\n"
+                result = "■ 現在のステージ  ★ビッグラン開催中★\n"
             } else {
-                result = "■ 現在のステージ情報\n"
+                result = "■ 現在のステージ\n"
             }
             result += formatScheduleInfo(responseObject.Results[0])
         } else if nextTime < 5 {
             // 5時間未満の場合は次のスケジュールも表示
-            result += "■ 次のステージ情報　"
-            result += fmt.Sprintf("【開始まであと %d 時間！】\n", nextTime)
+            result += "■ 次のステージ　"
+            result += fmt.Sprintf("【あと %d 時間！】\n", nextTime)
             result += formatScheduleInfo(responseObject.Results[1])
         } else {
             // 5時間以上10時間未満の場合は現在のスケジュールを表示
             if (responseObject.Results[0].IsBigRun) {
-                result = "■ 現在のステージ情報 " + fmt.Sprintf("【ビッグラン終了まであと %d 時間！】\n", nextTime)
+                result = "■ 現在のステージ " + fmt.Sprintf("【ビッグラン終了まであと %d 時間！】\n", nextTime)
             } else {
-                result = "■ 現在のステージ情報 " + fmt.Sprintf("【終了まであと %d 時間！】\n", nextTime)
+                result = "■ 現在のステージ " + fmt.Sprintf("【あと %d 時間！】\n", nextTime)
             }
             result += formatScheduleInfo(responseObject.Results[0])
             lastRun = true
@@ -173,7 +173,7 @@ func formatScheduleInfo(result ScheduleResult) string {
     sb.WriteString(getStageStr(r.Stage.Name))
     sb.WriteString("\n")
 
-    sb.WriteString("・オオモノ　　：")
+    sb.WriteString("・オカシラ　　：")
     sb.WriteString(r.Boss.Name)
     sb.WriteString("\n")
 
