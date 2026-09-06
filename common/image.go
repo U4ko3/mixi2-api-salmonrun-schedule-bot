@@ -53,7 +53,7 @@ func newFace(size float64) (font.Face, error) {
 
 // レイアウト定数
 const (
-	canvasWidth  = 1200
+	canvasWidth  = 745
 	canvasHeight = 420
 
 	accentBarWidth = 10
@@ -62,8 +62,7 @@ const (
 	headerHeight   = 76
 	contentBottom  = 24
 
-	panelGap      = 24
-	leftPanelFrac = 0.56
+	stageCropSide = 0.2
 
 	panelRadius   = 16
 	badgeRadius   = 10
@@ -73,7 +72,6 @@ const (
 var (
 	colorBackground  = color.RGBA{0x20, 0x24, 0x2e, 0xff}
 	colorAccent      = color.RGBA{0x8b, 0xc3, 0x4a, 0xff}
-	colorRightPanel  = color.RGBA{0x2d, 0x32, 0x3f, 0xff}
 	colorWeaponSlot  = color.RGBA{0x18, 0x1a, 0x22, 0xff}
 	colorBadge       = color.RGBA{0x00, 0x00, 0x00, 0xb8}
 	colorWhite       = color.RGBA{0xff, 0xff, 0xff, 0xff}
@@ -93,23 +91,15 @@ func BuildScheduleImagePNG(r ScheduleResult) ([]byte, error) {
 		return nil, err
 	}
 
-	contentWidth := canvasWidth - contentMarginX*2
-	leftWidth := int(float64(contentWidth) * leftPanelFrac)
-	rightWidth := contentWidth - leftWidth - panelGap
-
-	leftRect := image.Rect(
+	contentRect := image.Rect(
 		contentMarginX, headerHeight,
-		contentMarginX+leftWidth, canvasHeight-contentBottom,
-	)
-	rightRect := image.Rect(
-		leftRect.Max.X+panelGap, headerHeight,
-		leftRect.Max.X+panelGap+rightWidth, canvasHeight-contentBottom,
+		canvasWidth-contentMarginX, canvasHeight-contentBottom,
 	)
 
-	if err := drawStagePanel(img, leftRect, r); err != nil {
+	if err := drawStagePanel(img, contentRect, r); err != nil {
 		return nil, err
 	}
-	if err := drawBossPanel(img, rightRect, r); err != nil {
+	if err := drawBossOverlay(img, contentRect, r); err != nil {
 		return nil, err
 	}
 
@@ -155,7 +145,8 @@ func drawStagePanel(img *image.RGBA, rect image.Rectangle, r ScheduleResult) err
 	if err != nil || stageImg == nil {
 		fillRoundedRect(img, rect, panelRadius, colorPlaceholder)
 	} else {
-		fitted := scaleToFill(stageImg, rect.Dx(), rect.Dy())
+		cropped := cropHorizontal(stageImg, stageCropSide, stageCropSide)
+		fitted := scaleToFill(cropped, rect.Dx(), rect.Dy())
 		drawImageInRoundedRect(img, fitted, rect, panelRadius)
 	}
 
@@ -177,15 +168,11 @@ func drawStagePanel(img *image.RGBA, rect image.Rectangle, r ScheduleResult) err
 	return nil
 }
 
-func drawBossPanel(img *image.RGBA, rect image.Rectangle, r ScheduleResult) error {
-	fillRoundedRect(img, rect, panelRadius, colorRightPanel)
-
-	weaponAreaHeight := weaponBoxSize + 32
-	nameAreaRect := image.Rect(rect.Min.X, rect.Min.Y, rect.Max.X, rect.Max.Y-weaponAreaHeight)
-
+// drawBossOverlay は、オオモノの名前とブキ画像を、ステージ画像の上に重ねて描画します。
+func drawBossOverlay(img *image.RGBA, rect image.Rectangle, r ScheduleResult) error {
 	bossName := r.Boss.Name
-	size := 48.0
-	maxWidth := nameAreaRect.Dx() - 40
+	size := 34.0
+	maxWidth := rect.Dx()/2 - 16
 	var face font.Face
 	for {
 		f, err := newFace(size)
@@ -193,7 +180,7 @@ func drawBossPanel(img *image.RGBA, rect image.Rectangle, r ScheduleResult) erro
 			return err
 		}
 		w := measureText(f, bossName)
-		if w <= maxWidth || size <= 20 {
+		if w <= maxWidth || size <= 18 {
 			face = f
 			break
 		}
@@ -201,7 +188,17 @@ func drawBossPanel(img *image.RGBA, rect image.Rectangle, r ScheduleResult) erro
 		size -= 2
 	}
 	defer face.Close()
-	drawTextCentered(img, face, bossName, nameAreaRect, colorWhite)
+
+	pad := 10
+	textW := measureText(face, bossName)
+	metrics := face.Metrics()
+	textH := metrics.Ascent.Round() + metrics.Descent.Round()
+	nameBadgeRect := image.Rect(
+		rect.Max.X-16-textW-pad*2, rect.Min.Y+16,
+		rect.Max.X-16, rect.Min.Y+16+textH+pad*2,
+	)
+	drawRoundedRect(img, nameBadgeRect, badgeRadius, colorBadge)
+	drawTextCentered(img, face, bossName, nameBadgeRect, colorWhite)
 
 	weapons := r.Weapons
 	if len(weapons) > 4 {
@@ -220,7 +217,7 @@ func drawBossPanel(img *image.RGBA, rect image.Rectangle, r ScheduleResult) erro
 		slotSize = weaponBoxSize
 	}
 	rowWidth := slotSize*n + totalGap
-	startX := rect.Min.X + (rect.Dx()-rowWidth)/2
+	startX := rect.Max.X - 16 - rowWidth
 	slotY := rect.Max.Y - 16 - slotSize
 
 	for i, w := range weapons {
@@ -264,6 +261,22 @@ func fetchImage(url string) (image.Image, error) {
 		return nil, err
 	}
 	return img, nil
+}
+
+// cropHorizontal は、画像の左右をそれぞれ指定した割合だけ切り落とします。
+func cropHorizontal(src image.Image, leftFrac, rightFrac float64) image.Image {
+	b := src.Bounds()
+	w, h := b.Dx(), b.Dy()
+	leftPx := int(float64(w) * leftFrac)
+	rightPx := int(float64(w) * rightFrac)
+	newW := w - leftPx - rightPx
+	if newW <= 0 {
+		return src
+	}
+
+	dst := image.NewRGBA(image.Rect(0, 0, newW, h))
+	draw.Draw(dst, dst.Bounds(), src, image.Point{b.Min.X + leftPx, b.Min.Y}, draw.Src)
+	return dst
 }
 
 // scaleToFill は、指定サイズを埋めるように画像を拡大縮小し、はみ出た部分を中央基準で切り抜きます（カバーフィット）。
