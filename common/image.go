@@ -53,21 +53,21 @@ func newFace(size float64) (font.Face, error) {
 
 // レイアウト定数
 const (
-	canvasWidth  = 1200
-	canvasHeight = 420
+	canvasWidth  = 600
+	canvasHeight = 210
 
-	accentBarWidth = 10
+	accentBarWidth = 5
 
-	contentMarginX = 32
-	headerHeight   = 76
-	contentBottom  = 24
+	contentMarginX = 16
+	headerHeight   = 38
+	contentBottom  = 12
 
-	panelGap      = 24
+	panelGap      = 12
 	leftPanelFrac = 0.56
 
-	panelRadius   = 16
-	badgeRadius   = 10
-	weaponBoxSize = 96
+	panelRadius   = 8
+	badgeRadius   = 5
+	weaponBoxSize = 48
 )
 
 var (
@@ -121,29 +121,29 @@ func BuildScheduleImagePNG(r ScheduleResult) ([]byte, error) {
 }
 
 func drawHeader(img *image.RGBA, r ScheduleResult) error {
-	face, err := newFace(26)
+	face, err := newFace(13)
 	if err != nil {
 		return err
 	}
 	defer face.Close()
 
-	iconRect := image.Rect(contentMarginX, 24, contentMarginX+30, 24+26)
+	iconRect := image.Rect(contentMarginX, 12, contentMarginX+15, 12+13)
 	drawFishIcon(img, iconRect)
 
 	scheduleText := fmt.Sprintf("%s - %s", formatTimeWithWeekdayJST(r.StartTime), formatTimeWithWeekdayJST(r.EndTime))
-	drawText(img, face, scheduleText, iconRect.Max.X+14, 24, colorWhite)
+	drawText(img, face, scheduleText, iconRect.Max.X+7, 12, colorWhite)
 
 	if r.IsBigRun {
 		badgeText := "ビッグラン"
-		badgeFace, err := newFace(18)
+		badgeFace, err := newFace(9)
 		if err != nil {
 			return err
 		}
 		defer badgeFace.Close()
 		w := measureText(badgeFace, badgeText)
-		pad := 12
-		badgeRect := image.Rect(canvasWidth-contentMarginX-w-pad*2, 22, canvasWidth-contentMarginX, 22+32)
-		drawRoundedRect(img, badgeRect, 8, colorBigRunBadge)
+		pad := 6
+		badgeRect := image.Rect(canvasWidth-contentMarginX-w-pad*2, 11, canvasWidth-contentMarginX, 11+16)
+		drawRoundedRect(img, badgeRect, 4, colorBigRunBadge)
 		drawTextCentered(img, badgeFace, badgeText, badgeRect, color.RGBA{0x2b, 0x1d, 0x00, 0xff})
 	}
 
@@ -159,17 +159,17 @@ func drawStagePanel(img *image.RGBA, rect image.Rectangle, r ScheduleResult) err
 		drawImageInRoundedRect(img, fitted, rect, panelRadius)
 	}
 
-	labelFace, err := newFace(22)
+	labelFace, err := newFace(11)
 	if err != nil {
 		return err
 	}
 	defer labelFace.Close()
 
-	pad := 10
+	pad := 5
 	textW := measureText(labelFace, r.Stage.Name)
 	badgeRect := image.Rect(
-		rect.Min.X+16, rect.Max.Y-16-32-pad,
-		rect.Min.X+16+textW+pad*2, rect.Max.Y-16,
+		rect.Min.X+8, rect.Max.Y-8-16-pad,
+		rect.Min.X+8+textW+pad*2, rect.Max.Y-8,
 	)
 	drawRoundedRect(img, badgeRect, badgeRadius, colorBadge)
 	drawTextCentered(img, labelFace, r.Stage.Name, badgeRect, colorWhite)
@@ -180,12 +180,12 @@ func drawStagePanel(img *image.RGBA, rect image.Rectangle, r ScheduleResult) err
 func drawBossPanel(img *image.RGBA, rect image.Rectangle, r ScheduleResult) error {
 	fillRoundedRect(img, rect, panelRadius, colorRightPanel)
 
-	weaponAreaHeight := weaponBoxSize + 32
+	weaponAreaHeight := weaponBoxSize + 16
 	nameAreaRect := image.Rect(rect.Min.X, rect.Min.Y, rect.Max.X, rect.Max.Y-weaponAreaHeight)
 
 	bossName := r.Boss.Name
-	size := 48.0
-	maxWidth := nameAreaRect.Dx() - 40
+	size := 24.0
+	maxWidth := nameAreaRect.Dx() - 20
 	var face font.Face
 	for {
 		f, err := newFace(size)
@@ -193,12 +193,12 @@ func drawBossPanel(img *image.RGBA, rect image.Rectangle, r ScheduleResult) erro
 			return err
 		}
 		w := measureText(f, bossName)
-		if w <= maxWidth || size <= 20 {
+		if w <= maxWidth || size <= 10 {
 			face = f
 			break
 		}
 		f.Close()
-		size -= 2
+		size -= 1
 	}
 	defer face.Close()
 	drawTextCentered(img, face, bossName, nameAreaRect, colorWhite)
@@ -212,16 +212,16 @@ func drawBossPanel(img *image.RGBA, rect image.Rectangle, r ScheduleResult) erro
 		return nil
 	}
 
-	slotGap := 12
+	slotGap := 6
 	totalGap := slotGap * (n - 1)
-	availableWidth := rect.Dx() - 32
+	availableWidth := rect.Dx() - 16
 	slotSize := (availableWidth - totalGap) / n
 	if slotSize > weaponBoxSize {
 		slotSize = weaponBoxSize
 	}
 	rowWidth := slotSize*n + totalGap
 	startX := rect.Min.X + (rect.Dx()-rowWidth)/2
-	slotY := rect.Max.Y - 16 - slotSize
+	slotY := rect.Max.Y - 8 - slotSize
 
 	for i, w := range weapons {
 		slotRect := image.Rect(startX+i*(slotSize+slotGap), slotY, startX+i*(slotSize+slotGap)+slotSize, slotY+slotSize)
