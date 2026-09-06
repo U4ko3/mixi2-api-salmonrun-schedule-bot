@@ -46,19 +46,22 @@ func (h *Handler) Handle(ctx context.Context, ev *modelv1.Event) error {
 		receivedPostId := receivedPost.GetPostId()
 		receivedPostText := receivedPost.GetText()
 		postText := ""
+		var result *common.ScheduleResult
 		if strings.Contains(receivedPostText, "次") {
-			postText = common.GetNextSalmonSchedule()
+			postText, result = common.GetNextSalmonSchedule()
 		} else {
-			postText = common.GetCurrentSalmonSchedule()
+			postText, result = common.GetCurrentSalmonSchedule()
 		}
 
 		if postText == "" {
 			h.logger.Info("no schedule information available")
 			return nil
 		} else {
+			mediaIds := common.BuildAndUploadScheduleImage(authCtx, h.apiClient, h.authenticator, result)
 			_, err = h.apiClient.CreatePost(authCtx, &application_apiv1.CreatePostRequest{
 						InReplyToPostId: &receivedPostId,
 						Text: postText,
+						MediaIdList: mediaIds,
 					})
 			if err != nil {
 				return err

@@ -3,7 +3,7 @@ package common
 import (
     "encoding/json"
     "fmt"
-    "io/ioutil"
+    "io"
     "net/http"
     "strings"
     "time"
@@ -22,10 +22,12 @@ type ScheduleResult struct {
         Name string `json:"name"`
     } `json:"boss"`
     Stage struct {
-        Name string `json:"name"`
+        Name  string `json:"name"`
+        Image string `json:"image"`
     } `json:"stage"`
     Weapons []struct {
-        Name string `json:"name"`
+        Name  string `json:"name"`
+        Image string `json:"image"`
     } `json:"weapons"`
     IsBigRun bool `json:"is_big_run"`
 }
@@ -35,127 +37,120 @@ type APIResponse struct {
     Results []ScheduleResult `json:"results"`
 }
 
-// GetSalmonSchedule は現在のサーモンランスケジュールをフェッチし、フォーマットします。
-// 他のパッケージで使用するためにエクスポートされています。
-// フォーマットされたスケジュール文字列と、残り時間短いかどうかを示すブールを返します。
-func GetSalmonSchedule() (string, bool) {
+// fetchSchedule はサーモンランスケジュールAPIを呼び出し、レスポンスをパースして返します。
+func fetchSchedule() (*APIResponse, error) {
     resp, err := http.Get(SalmonScheduleAPIURL)
     if err != nil {
-        fmt.Printf("The HTTP request failed with error %s\n", err)
-        return "", false
+        return nil, fmt.Errorf("the HTTP request failed: %w", err)
     }
+    defer resp.Body.Close()
 
-    fmt.Println("The HTTP request succeeded")
-    data, _ := ioutil.ReadAll(resp.Body)
+    data, err := io.ReadAll(resp.Body)
+    if err != nil {
+        return nil, fmt.Errorf("failed to read response body: %w", err)
+    }
 
     var responseObject APIResponse
     if err := json.Unmarshal(data, &responseObject); err != nil {
-        fmt.Printf("JSON unmarshal failed: %v\n", err)
-        return "", false
+        return nil, fmt.Errorf("JSON unmarshal failed: %w", err)
+    }
+
+    return &responseObject, nil
+}
+
+// GetSalmonSchedule は現在のサーモンランスケジュールをフェッチし、フォーマットします。
+// 他のパッケージで使用するためにエクスポートされています。
+// フォーマットされたスケジュール文字列、投稿に使用したスケジュール情報、
+// 残り時間が短いかどうかを示すブールを返します。
+func GetSalmonSchedule() (string, *ScheduleResult, bool) {
+    responseObject, err := fetchSchedule()
+    if err != nil {
+        fmt.Println(err)
+        return "", nil, false
+    }
+
+    if len(responseObject.Results) == 0 {
+        return "", nil, false
     }
 
     result := ""
     lastRun := false
+    current := responseObject.Results[0]
 
-    // APIのresultsが空でない場合、最初のスケジュール情報をフォーマットして返す
-    if len(responseObject.Results) == 0 {
-        return "", false
-    } else {
-        nextTime := diffStartEndTime(responseObject.Results[0].EndTime)
-        if nextTime > 10 {
-            // 10時間以上残っている場合は次のスケジュールを表示
-            if (responseObject.Results[0].IsBigRun) {
-                result = "■ 現在のステージ  ★ビッグラン開催中★\n"
-            } else {
-                result = "■ 現在のステージ\n"
-            }
-            result += formatScheduleInfo(responseObject.Results[0])
-        } else if nextTime < 5 {
-            // 5時間未満の場合は次のスケジュールも表示
-            result += "■ 次のステージ　"
-            result += fmt.Sprintf("【あと %d 時間！】\n", nextTime)
-            result += formatScheduleInfo(responseObject.Results[1])
+    nextTime := diffStartEndTime(current.EndTime)
+    if nextTime > 10 {
+        // 10時間以上残っている場合は現在のスケジュールを表示
+        if current.IsBigRun {
+            result = "■ 現在のステージ  ★ビッグラン開催中★\n"
         } else {
-            // 5時間以上10時間未満の場合は現在のスケジュールを表示
-            if (responseObject.Results[0].IsBigRun) {
-                result = "■ 現在のステージ " + fmt.Sprintf("【ビッグラン終了まであと %d 時間！】\n", nextTime)
-            } else {
-                result = "■ 現在のステージ " + fmt.Sprintf("【あと %d 時間！】\n", nextTime)
-            }
-            result += formatScheduleInfo(responseObject.Results[0])
-            lastRun = true
+            result = "■ 現在のステージ\n"
         }
-            
-        result += "\n\n"
+        result += formatScheduleInfo(current)
+    } else if nextTime < 5 && len(responseObject.Results) > 1 {
+        // 5時間未満の場合は次のスケジュールを表示
+        next := responseObject.Results[1]
+        result += "■ 次のステージ　"
+        result += fmt.Sprintf("【あと %d 時間！】\n", nextTime)
+        result += formatScheduleInfo(next)
+        current = next
+    } else {
+        // 5時間以上10時間未満の場合は現在のスケジュールを表示
+        if current.IsBigRun {
+            result = "■ 現在のステージ " + fmt.Sprintf("【ビッグラン終了まであと %d 時間！】\n", nextTime)
+        } else {
+            result = "■ 現在のステージ " + fmt.Sprintf("【あと %d 時間！】\n", nextTime)
+        }
+        result += formatScheduleInfo(current)
+        lastRun = true
     }
 
-    return result, lastRun
+    result += "\n\n"
+
+    return result, &current, lastRun
 }
 
-// 現在のスケジュールを取得する関数
-func GetCurrentSalmonSchedule() string {
-    resp, err := http.Get(SalmonScheduleAPIURL)
+// GetCurrentSalmonSchedule は現在のスケジュールを取得する関数です。
+func GetCurrentSalmonSchedule() (string, *ScheduleResult) {
+    responseObject, err := fetchSchedule()
     if err != nil {
-        fmt.Printf("The HTTP request failed with error %s\n", err)
-        return ""
+        fmt.Println(err)
+        return "", nil
     }
 
-    fmt.Println("The HTTP request succeeded")
-    data, _ := ioutil.ReadAll(resp.Body)
-
-    var responseObject APIResponse
-    if err := json.Unmarshal(data, &responseObject); err != nil {
-        fmt.Printf("JSON unmarshal failed: %v\n", err)
-        return ""
-    }
-
-    result := ""
-
-    // APIのresultsが空でない場合、最初のスケジュール情報をフォーマットして返す
     if len(responseObject.Results) == 0 {
-        return ""
-    } else {
-        nextTime := diffStartEndTime(responseObject.Results[0].EndTime)
-        result = "■ 現在のステージ情報 " + fmt.Sprintf("【終了まであと %d 時間！】\n", nextTime)
-        result += formatScheduleInfo(responseObject.Results[0])
-            
-        result += "\n\n"
+        return "", nil
     }
 
-    return result
+    current := responseObject.Results[0]
+    nextTime := diffStartEndTime(current.EndTime)
+
+    result := "■ 現在のステージ情報 " + fmt.Sprintf("【終了まであと %d 時間！】\n", nextTime)
+    result += formatScheduleInfo(current)
+    result += "\n\n"
+
+    return result, &current
 }
 
-// 次のスケジュールを取得する関数
-func GetNextSalmonSchedule() string {
-    resp, err := http.Get(SalmonScheduleAPIURL)
+// GetNextSalmonSchedule は次のスケジュールを取得する関数です。
+func GetNextSalmonSchedule() (string, *ScheduleResult) {
+    responseObject, err := fetchSchedule()
     if err != nil {
-        fmt.Printf("The HTTP request failed with error %s\n", err)
-        return ""
+        fmt.Println(err)
+        return "", nil
     }
 
-    fmt.Println("The HTTP request succeeded")
-    data, _ := ioutil.ReadAll(resp.Body)
-
-    var responseObject APIResponse
-    if err := json.Unmarshal(data, &responseObject); err != nil {
-        fmt.Printf("JSON unmarshal failed: %v\n", err)
-        return ""
+    if len(responseObject.Results) < 2 {
+        return "", nil
     }
 
-    result := ""
+    next := responseObject.Results[1]
+    nextTime := diffStartEndTime(responseObject.Results[0].EndTime)
 
-    // APIのresultsが空でない場合、最初のスケジュール情報をフォーマットして返す
-    if len(responseObject.Results) == 0 {
-        return ""
-    } else {
-        nextTime := diffStartEndTime(responseObject.Results[0].EndTime)
-        result = "■ 次のステージ情報 " + fmt.Sprintf("【開始まであと %d 時間！】\n", nextTime)
-        result += formatScheduleInfo(responseObject.Results[1])
-            
-        result += "\n\n"
-    }
+    result := "■ 次のステージ情報 " + fmt.Sprintf("【開始まであと %d 時間！】\n", nextTime)
+    result += formatScheduleInfo(next)
+    result += "\n\n"
 
-    return result
+    return result, &next
 }
 
 // formatScheduleInfo formats schedule information from API results
@@ -245,5 +240,3 @@ func getStageStr(stage string) string {
 
     return result
 }
-
-

@@ -151,13 +151,15 @@ func periodicTask(ctx context.Context, apiClient application_apiv1.ApplicationSe
 		return err
 	}
 
-	postText, _ := common.GetSalmonSchedule()
+	postText, result, _ := common.GetSalmonSchedule()
 	if postText == "" {
 		logger.Info("no schedule information available")
 		return nil
 	} else {
+		mediaIds := common.BuildAndUploadScheduleImage(authCtx, apiClient, authenticator, result)
 		_, err = apiClient.CreatePost(authCtx, &application_apiv1.CreatePostRequest{
-			Text: postText,
+			Text:        postText,
+			MediaIdList: mediaIds,
 		})
 		if err != nil {
 			return err

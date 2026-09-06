@@ -50,13 +50,15 @@ func periodicTask(ctx context.Context, apiClient application_apiv1.ApplicationSe
 		return err
 	}
 
-	postText, lastRun := common.GetSalmonSchedule()
+	postText, result, lastRun := common.GetSalmonSchedule()
 	if postText == "" {
 		log.Println("no schedule information available")
 		return nil
 	} else {
+		mediaIds := common.BuildAndUploadScheduleImage(authCtx, apiClient, authenticator, result)
 		post, err := apiClient.CreatePost(authCtx, &application_apiv1.CreatePostRequest{
-			Text: postText,
+			Text:        postText,
+			MediaIdList: mediaIds,
 		})
 		if err != nil {
 			return err
@@ -70,14 +72,16 @@ func periodicTask(ctx context.Context, apiClient application_apiv1.ApplicationSe
 		}
 
 		if lastRun && postId != "" {
-			postText := common.GetNextSalmonSchedule()
+			postText, nextResult := common.GetNextSalmonSchedule()
 			if postText == "" {
 				log.Println("no schedule information available")
 				return nil
 			} else {
+				nextMediaIds := common.BuildAndUploadScheduleImage(authCtx, apiClient, authenticator, nextResult)
 				_, err = apiClient.CreatePost(authCtx, &application_apiv1.CreatePostRequest{
 					InReplyToPostId: &postId,
-					Text:           postText,
+					Text:            postText,
+					MediaIdList:     nextMediaIds,
 				})
 				if err != nil {
 					return err
